@@ -1,9 +1,12 @@
 import pandas as pd
 
-
+VALS = [
+    ('TSI', 'ge'), ('O2Hb', 'ge'), ('HHb', 'le'),
+    ('tHb', 'ge'), ('HbDiff', 'ge')
+    ]
 
 class Recovery():
-    
+
     def __init__(self, df, events, baselines):
 
         self.t_events = events
@@ -38,10 +41,13 @@ class Recovery():
         e_row_number = list_of_e[0]
         return e_row_number
 
-    @staticmethod  
+    @staticmethod
     def _get_timetohalf_recovery(recovery_df, baselinewerte):
         """
         Berechnung der Halbwertszeit der Regeneration nach Testabbruch
+
+        E1 is the termination of test
+        when will relaxation be half of the baseline starting from E1
 
         :param df: df's mit recovery Daten
         :param baselinewerte: Baseline Werte
@@ -49,52 +55,39 @@ class Recovery():
         :return: halftimes of TSI O2Hb HHb tHb HbDiff
         """
 
-        # get the relaxation start series ('E1 ') to get the diff to the baseline
+
         e1 = recovery_df[recovery_df['Events'] == 'E1 '].mean()
-        diff = (baselinewerte - e1) *0.5 + e1
-
-        #4 Zeitpunkte finden
-        TSI = diff['TSI']
-        O2Hb = diff['O2Hb']
-        HHb = diff['HHb']
-        tHb = diff['tHb']
-        HbDiff = diff['HbDiff']
-
         e1_row_number = Recovery._get_rownummber_for_event(recovery_df, 'E1 ')
+        diff = (baselinewerte - e1) * 0.5 + e1
 
-        df_match_TSI = recovery_df[ recovery_df['TSI'] >= TSI]
-        df_match_O2Hb = recovery_df[ recovery_df['O2Hb'] >= O2Hb]
-        df_match_HHb = recovery_df[ recovery_df['HHb'] <= HHb]
-        df_match_tHb = recovery_df[ recovery_df['tHb'] >= tHb]
-        df_match_HbDiff = recovery_df[ recovery_df['HbDiff'] >= HbDiff]
 
-        #5 Differenz Zeitpunkte T1/2
-        index_df_match_TSI = df_match_TSI[0:1].index.tolist()
-        index_df_match_O2Hb = df_match_O2Hb[0:1].index.tolist()
-        index_df_match_HHb = df_match_HHb[0:1].index.tolist()
-        index_df_match_tHb = df_match_tHb[0:1].index.tolist()
-        index_df_match_HbDiff = df_match_HbDiff[0:1].index.tolist()
+        res = {}
+        for val, comp in VALS:
+            #4 Zeitpunkte finden
+            diff_val = diff[val]
 
-        T1_2_TSI_s = (index_df_match_TSI[0]- e1_row_number)/10
-        T1_2_O2Hb_s = (index_df_match_O2Hb[0]- e1_row_number)/10
-        T1_2_HHb_s = (index_df_match_HHb[0]- e1_row_number)/10
-        T1_2_tHb_s = (index_df_match_tHb[0]- e1_row_number)/10
-        T1_2_HbDiff_s = (index_df_match_HbDiff[0]- e1_row_number)/10
+            if comp == 'le':
+                df_match = recovery_df[ recovery_df[val] <= diff_val]
+            elif comp == 'ge':
+                df_match = recovery_df[ recovery_df[val] >= diff_val]
 
-        #print('T1/2_TSI', T1_2_TSI)
-        #print('T1/2_O2Hb', T1_2_O2Hb)
-        #print('T1/2_HHb', T1_2_HHb)
-        #print( 'T1/2_tHb', T1_2_tHb)
-        #print('T1/2_HbDiff', T1_2_HbDiff)
+            if df_match.empty:
+                res[val] = None
+                continue
 
-        #fin result!
+            # 5 Differenz Zeitpunkte T1/2
+            index_df_match = df_match[0:1].index.tolist()
 
-        return  T1_2_TSI_s, T1_2_O2Hb_s, T1_2_HHb_s, T1_2_tHb_s, T1_2_HbDiff_s
+            # 6 scale down to time frame
+            res[val] = (index_df_match[0]- e1_row_number)/10
+
+        return res
+
 
     @staticmethod
     def _recovery_per_second(recovery_df):
         """
-        :return: average recovery per 0.1 seconds during T1/2    
+        :return: average recovery per 0.1 seconds during T1/2
         """
 
         #1 erzeuge ein neues DF und löschen darin die Spalten
@@ -131,30 +124,30 @@ class Recovery():
     def _dept(baselinewerte, e1):
         dept = 100 - ((100 / baselinewerte) * e1)
         return dept
-    
+
     def get_deltaprozent(self):
 
         result = {}
-        
+
         deltaprozent = self._recovery_per_second(self.recovery_df)
+
         half = self._get_timetohalf_recovery(self.recovery_df, self.baseline)
-    
-        T1_2_TSI_s, T1_2_O2Hb_s, T1_2_HHb_s, T1_2_tHb_s, T1_2_HbDiff_s = half
-        result['TSI'] = self._avg_recovery_for('TSI', T1_2_TSI_s, deltaprozent)
-        result['O2Hb'] = self._avg_recovery_for('O2Hb', T1_2_O2Hb_s, deltaprozent)
-        result['HHb'] = self._avg_recovery_for('HHb', T1_2_HHb_s, deltaprozent)
-        result['tHb'] = self._avg_recovery_for('tHb', T1_2_tHb_s, deltaprozent)
-        result['HbDiff'] = self._avg_recovery_for('HbDiff', T1_2_HbDiff_s, deltaprozent)
-        
+        for val, _ in VALS:
+            if half[val]:
+                result[val] = self._avg_recovery_for(
+                                        val, half[val], deltaprozent)
+            else:
+                result[val] = None
+
         return result
-    
+
     def get_timetohalf_recovery(self):
-        return self._get_timetohalf_recovery(self.recovery_df, self.baseline)
-    
+
+        half = self._get_timetohalf_recovery(self.recovery_df, self.baseline)
+        return half
+
     def get_dept(self):
         e1 = self.recovery_df[self.recovery_df['Events'] == 'E1 '].mean()
         return self._dept(self.baseline, e1)
-    
- 
 
 

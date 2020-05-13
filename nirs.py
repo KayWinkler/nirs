@@ -126,8 +126,8 @@ class Nirs():
     def load_nirs_data(self, filename):
 
         self.names = self.load_nirs_column_names(filename)
-
-        raw_df = pd.read_excel(filename, skiprows=45, names = self.names)
+        raw_df = pd.read_excel(filename, skiprows=45, names=self.names)
+       
         df_t_events = self.gather_t_events(raw_df)
         baselines = self.get_baseline_values(raw_df)
         raw_df = raw_df.set_index('Sample number')

@@ -207,7 +207,7 @@ class Testing():
         delta_relaxation = self._deltarelaxation(relaxation_minima_einzelne_wdh, relaxation_maxima_einzelne_wdh)
         
         # return the Series of average delta relaxation
-        return events['Events'].tolist(), delta_relaxation.mean()
+        return delta_relaxation.mean()
 
     def get_avg_delta_relaxation_all(self):
         return self._get_avg_delta_relaxation()
@@ -252,7 +252,7 @@ class Testing():
         delta_contraction = self._deltacontraction(minima_einzelne_wdh, maxima_einzelne_wdh)
 
         # return the Series of average delta contraction
-        return events['Events'].tolist(), delta_contraction.mean()
+        return delta_contraction.mean()
 
    
     def get_avg_delta_contraction_all(self):
