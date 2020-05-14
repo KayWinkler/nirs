@@ -219,12 +219,10 @@ def kraftausdauer_auswertung(Wiederholungen, Maximalkraft,
     }
 
 
-def Kraftausdauer(filename, maximalkraft):
+def get_kraftausdauer(filename, maximalkraft):
     """
     Kraftausdauer Auswertung mit verschiedenen Zeit und Kraft Beschränkungen
     """
-
-    Ergebnisse = []
 
     Zeitbeschränkungen = [0.0, 6.0, 5.0, 4.0]
     Kraftbeschränkungen = [0.0, 0.1, 0.07]
@@ -239,9 +237,9 @@ def Kraftausdauer(filename, maximalkraft):
                             Kraftbeschränkung=Kraftbeschränkung
                             )
 
-            Ergebnisse.append(Ergebniss)
+            yield Ergebniss
 
-    return Ergebnisse
+    return
 
 
 

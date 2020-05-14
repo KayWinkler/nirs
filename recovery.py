@@ -28,10 +28,6 @@ class Recovery():
         return df[e1_row_number-1: e2_row_number]
 
     @staticmethod
-    def _get_e1(recovery_df):
-        e1 = recovery_df[recovery_df['Events'] == 'E1 '].mean()
-
-    @staticmethod
     def _get_rownummber_for_event(df, event_name):
         """
         helper to get rownumber of event
@@ -90,20 +86,16 @@ class Recovery():
         :return: average recovery per 0.1 seconds during T1/2
         """
 
-        #1 erzeuge ein neues DF und löschen darin die Spalten
+        #1 erzeuge ein neues DF und löschen darin die Spalte 'Events'
 
-        recoverypersecond_df = pd.DataFrame()
-        recoverypersecond_df = recoverypersecond_df.append(recovery_df)
+        recoverypersecond_df = pd.DataFrame(recovery_df)
+        recoverypersecond_df.drop('Events', axis=1, inplace=True)
 
-        #recoverypersecond_df = recoverypersecond_df.drop('Empty colum', axis = 1)
-        recoverypersecond_df = recoverypersecond_df.drop('Event setting time', axis = 1)
-        recoverypersecond_df = recoverypersecond_df.drop('Events', axis = 1)
-
-        #2 Delta berechnen
+        # 2 Delta berechnen
 
         delta_df = recoverypersecond_df.diff()
-
-        #3 delta% berechnen
+ 
+        # 3 delta in % berechnen
 
         e1 = recovery_df[recovery_df['Events'] == 'E1 '].mean()
         deltaprozent = (100/(e1))*delta_df

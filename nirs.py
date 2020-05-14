@@ -98,8 +98,7 @@ class Nirs():
         names = []
         
         assoc = pd.read_excel(filename, skiprows=34, nrows=8)
-
-        for index, row in assoc.iterrows():
+        for _index, row in assoc.iterrows():
 
             colname =  row['Trace (Measurement)']
             if 'Sample' in colname:
@@ -127,9 +126,16 @@ class Nirs():
 
         self.names = self.load_nirs_column_names(filename)
         raw_df = pd.read_excel(filename, skiprows=45, names=self.names)
-       
+
         df_t_events = self.gather_t_events(raw_df)
+
+        raw_df.drop('Empty Column', axis=1, inplace=True)
+        raw_df.drop('Event setting time', axis=1, inplace=True)
+
+        raw_df['Events'].replace(np.nan, '', inplace=True)
+
         baselines = self.get_baseline_values(raw_df)
+
         raw_df = raw_df.set_index('Sample number')
 
         return raw_df, df_t_events, baselines
