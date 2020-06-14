@@ -43,80 +43,54 @@ class Testing():
         self.df = df
         self.baselines = baselines
 
+    @staticmethod
+    def get_df(df, e_start, e_end):
+        """
+        Berechnung der Halbwertszeit der Regeneration nach Testabbruch
+
+        :param df: Rohdaten
+        :return: recovery dataframe
+        """
+
+        t1_row_number = Testing._get_rownummber_for_event(df, e_start)
+        e1_row_number = Testing._get_rownummber_for_event(df, e_end)
+
+        return df[t1_row_number - 1: e1_row_number]
+
+    @staticmethod
+    def get_testing_df(df):
+        """
+        Berechnung der Halbwertszeit der Regeneration nach Testabbruch
+
+        :param df: Rohdaten
+        :return: recovery dataframe
+        """
+
+        t1_row_number = Testing._get_rownummber_for_event(df, 'T1 ')
+        e1_row_number = Testing._get_rownummber_for_event(df, 'E1 ')
+
+        return df[t1_row_number - 20: e1_row_number]
+
+    @staticmethod
+    def _get_rownummber_for_event(df, event_name):
+        """
+        helper to get rownumber of event
+        """
+        E = df[df['Events'] == event_name]
+        list_of_e = E.index.tolist()
+        e_row_number = list_of_e[0]
+        return e_row_number
 
     def get_minima(self, max_events):
-        """"""
+        """
 
-        minima_gesamter_test = self._minma_relevant(self.df, self.t_events, max_events)
+        """
 
-        differenz = self._differenz(self.baselines, minima_gesamter_test)
+        minima_gesamter_test = self._minma_relevant(
+            self.df, self.t_events, max_events)
+        differenz = self.baselines - minima_gesamter_test
 
         return minima_gesamter_test, differenz
-
-
-    def _minma_relevant(self, df, df_all_events, max_events):
-
-        df_events = df_all_events[0:max_events]
-        df_events_sample_number = df_events.index
-        sample_number_firstT = df_events_sample_number.min()
-        sample_number_lastT = df_events_sample_number.max()
-        minima_gesamter_test_df = df[sample_number_firstT-1:sample_number_lastT]
-
-        minima_gesamter_test = minima_gesamter_test_df.min()
-
-        return minima_gesamter_test
-
-
-    def _differenz(self, baselinewerte, minima_gesamter_test):
-        """
-        comment helperfunktion zur Berechnung der Differenz zwischen den Baselinewerten minus des Minimas der gesamten Testspanne
-        :param base...:
-        :return: dict ...
-        """
-        liste_baselinewerte = baselinewerte.to_numpy()
-        liste_minima_gesamter_test = minima_gesamter_test.to_numpy()
-
-        res = {}
-
-        idx = -1
-        for key in baselinewerte.keys().tolist():
-            idx += 1
-            if key.startswith("Empty"):
-                continue
-
-            diff = liste_baselinewerte[idx] - liste_minima_gesamter_test[idx]
-            res[key] = diff
-        return res
-
-    def _get_minima_einzelne_wdh(self, max_events):
-        events = self.t_events[:max_events]
-
-        res = self._avg_minima_einzelne_wdh(self.df, events)
-        min_cont, max_cont, min_rel, max_rel = res
-        mean_minima = min_cont.mean()
-
-        return mean_minima
-
-    def _differenz_einzelne_wdh(self, baselinewerte, mean_minima):
-        """
-        comment helperfunktion zur Berechnung der Differenz zwischen den Baselinewerten minus des Minimas der gesamten Testspanne
-        :param base...:
-        :return: dict ...
-        """
-        liste_baselinewerte = baselinewerte.to_numpy()
-        liste_mean_minima = mean_minima.to_numpy()
-
-        res = {}
-
-        idx = -1
-        for key in baselinewerte.keys().tolist():
-            idx += 1
-            if key.startswith("Empty"):
-                continue
-
-            diff = liste_baselinewerte[idx] - liste_mean_minima[idx]
-            res[key] = diff
-        return res
 
     def get_mean_minima(self, max_events):
         """
@@ -126,12 +100,31 @@ class Testing():
         """
 
         mean_minima = self._get_minima_einzelne_wdh(max_events)
-
-        differenz_mean_minima = self._differenz_einzelne_wdh(self.baselines, mean_minima)
+        differenz_mean_minima = self.baselines - mean_minima
 
         return mean_minima, differenz_mean_minima
 
+    def _minma_relevant(self, df, df_all_events, max_events):
 
+        df_events = df_all_events[0:max_events]
+        df_events_sample_number = df_events.index
+        sample_number_firstT = df_events_sample_number.min()
+        sample_number_lastT = df_events_sample_number.max()
+        minima_gesamter_test_df = df[sample_number_firstT -
+                                     1:sample_number_lastT]
+
+        minima_gesamter_test = minima_gesamter_test_df.min()
+
+        return minima_gesamter_test
+
+    def _get_minima_einzelne_wdh(self, max_events):
+        events = self.t_events[:max_events]
+
+        res = self._avg_minima_einzelne_wdh(self.df, events)
+        min_cont, max_cont, min_rel, max_rel = res
+        mean_minima = min_cont.mean()
+
+        return mean_minima
 
     def _avg_minima_einzelne_wdh(self, raw_df, df_t_events):
         """
@@ -204,15 +197,20 @@ class Testing():
         delta = pd.DataFrame()
 
         # Delta alle Wdh
-
-        delta['Delta'+scope+'_TSI'] = delta_all['minima_TSI'] - delta_all['maxima_TSI']
-        delta['Delta'+scope+'_O2Hb'] = ((delta_all['minima_O2Hb']/delta_all['maxima_O2Hb'])-1)*100
-        delta['Delta'+scope+'_HHb'] = ((delta_all['minima_HHb']/delta_all['maxima_HHb'])-1)*100
-        delta['Delta'+scope+'_tHb'] = ((delta_all['minima_tHb']/delta_all['maxima_tHb'])-1)*100
-        delta['Delta'+scope+'_HbDiff'] = ((delta_all['minima_HbDiff']/delta_all['maxima_HbDiff'])-1)*100
-
+        try:
+            delta['Delta' + scope + '_TSI'] = delta_all['minima_TSI'] - \
+                delta_all['maxima_TSI']
+            delta['Delta' + scope + '_O2Hb'] = (
+                (delta_all['minima_O2Hb'] / delta_all['maxima_O2Hb']) - 1) * 100
+            delta['Delta' + scope +
+                  '_HHb'] = ((delta_all['minima_HHb'] / delta_all['maxima_HHb']) - 1) * 100
+            delta['Delta' + scope +
+                  '_tHb'] = ((delta_all['minima_tHb'] / delta_all['maxima_tHb']) - 1) * 100
+            delta['Delta' + scope + '_HbDiff'] = (
+                (delta_all['minima_HbDiff'] / delta_all['maxima_HbDiff']) - 1) * 100
+        except Exception as _exx:
+            pass
         return delta
-
 
     def _deltacontraction(self, cont_min_df, cont_max_df):
         """
@@ -247,13 +245,16 @@ class Testing():
         (_, _, relax_min_einzelne_wdh, relax_max_einzelne_wdh) = result
 
         delta_relaxation = self._deltarelaxation(
-                            relax_min_einzelne_wdh, relax_max_einzelne_wdh
-                            )
+            relax_min_einzelne_wdh, relax_max_einzelne_wdh
+        )
 
         return delta_relaxation.mean()
 
-    def get_avg_delta_relaxation_all(self):
-        return self._get_avg_delta_relaxation()
+    def get_avg_delta_relaxation_all(self, max_):
+        events = self.t_events[:max_]
+        if len(events) <= 2:
+            return EmptyDeltaRelaxation
+        return self._get_avg_delta_relaxation(events)
 
     def get_avg_delta_relaxation_first(self, max_, num=3):
         if max_ < num:
@@ -297,10 +298,11 @@ class Testing():
 
         return delta_contraction.mean()
 
-
-    def get_avg_delta_contraction_all(self):
-        return self._get_avg_delta_contraction()
-
+    def get_avg_delta_contraction_all(self, max_):
+        events = self.t_events[:max_]
+        if len(events) <= 2:
+            return EmptyDeltaKontraktion
+        return self._get_avg_delta_contraction(events)
 
     def get_avg_delta_contraction_first(self, max_, num=3):
         if max_ < num:
