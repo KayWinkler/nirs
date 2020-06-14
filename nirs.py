@@ -2,11 +2,13 @@
 # coding: utf-8
 
 import csv
-import pandas as pd
+
+import xlrd
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import xlrd
+import pandas as pd
 
 
 def daten_plotten(df):
@@ -19,34 +21,34 @@ def daten_plotten(df):
     TSI = df['TSI']
     Events = df['Events']
 
-
-    #daten ploten
+    # daten ploten
     plt.plot(TSI_Fit_Factor)
     plt.plot(O2Hb)
     plt.plot(HHb)
     plt.plot(tHb)
     plt.plot(HbDiff)
     plt.plot(TSI)
-    #Legende einfügen
+    # Legende einfügen
     plt.legend()
     plt.show()
 
 
 class Nirs():
-    
+
     def __init__(self):
         self.names = [
-            'Sample number', 
-            'TSI Fit Factor', 
-            'O2Hb', 
-            'HHb', 
-            'tHb', 
-            'HbDiff', 
-            'TSI', 
-            'Events', 
-            'Empty colum', 
+            'Sample number',
+            'TSI Fit Factor',
+            'O2Hb',
+            'HHb',
+            'tHb',
+            'HbDiff',
+            'TSI',
+            'Events',
+            'Empty colum',
             'Event setting time'
         ]
+
     def gather_t_events(self, df):
         Events = df['Events']
         E = Events.dropna()
@@ -60,7 +62,6 @@ class Nirs():
 
             e2.append(item)
 
-
         df_e_append = pd.DataFrame()
 
         e2_dict = {}
@@ -72,7 +73,7 @@ class Nirs():
             e2_dict[item.strip()] = df_e
 
         return df_e_append
-    
+
     @staticmethod
     def get_baseline_values(df):
         """#Baselinewerte"""
@@ -96,11 +97,11 @@ class Nirs():
         read the column name description preface
         """
         names = []
-        
+
         assoc = pd.read_excel(filename, skiprows=34, nrows=8)
         for _index, row in assoc.iterrows():
 
-            colname =  row['Trace (Measurement)']
+            colname = row['Trace (Measurement)']
             if 'Sample' in colname:
                 names.append('Sample number')
             elif 'TSI Fit Factor' in colname:
@@ -121,13 +122,11 @@ class Nirs():
         names.append('Empty Column')
         names.append('Event setting time')
         return names
-    
+
     def load_nirs_data(self, filename):
 
         self.names = self.load_nirs_column_names(filename)
         raw_df = pd.read_excel(filename, skiprows=45, names=self.names)
-
-        df_t_events = self.gather_t_events(raw_df)
 
         raw_df.drop('Empty Column', axis=1, inplace=True)
         raw_df.drop('Event setting time', axis=1, inplace=True)
@@ -137,5 +136,7 @@ class Nirs():
         baselines = self.get_baseline_values(raw_df)
 
         raw_df = raw_df.set_index('Sample number')
+
+        df_t_events = self.gather_t_events(raw_df)
 
         return raw_df, df_t_events, baselines
