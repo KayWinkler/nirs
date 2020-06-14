@@ -1,23 +1,24 @@
-import pandas as pd
 from nirs import Nirs
+import pandas as pd
+
 
 Rename_Min_Mapping = {
-    'HHb': 'minima_HHb', 
-    'HbDiff' : 'minima_HbDiff', 
-    'O2Hb' : 'minima_O2Hb',
-    'TSI': 'minima_TSI', 
-    'TSI Fit Factor' : 'minima_TSI Fit Factor' ,
+    'HHb': 'minima_HHb',
+    'HbDiff': 'minima_HbDiff',
+    'O2Hb': 'minima_O2Hb',
+    'TSI': 'minima_TSI',
+    'TSI Fit Factor': 'minima_TSI Fit Factor',
     'tHb': 'minima_tHb'
-    }
+}
 
 Rename_Max_Mapping = {
     'HHb': 'maxima_HHb',
-    'HbDiff' : 'maxima_HbDiff',
-    'O2Hb' : 'maxima_O2Hb',
+    'HbDiff': 'maxima_HbDiff',
+    'O2Hb': 'maxima_O2Hb',
     'TSI': 'maxima_TSI',
-    'TSI Fit Factor' : 'maxima_TSI Fit Factor' ,
+    'TSI Fit Factor': 'maxima_TSI Fit Factor',
     'tHb': 'maxima_tHb'
-    }
+}
 
 EmptyDeltaKontraktion = {
     'DeltaKontraktion_TSI': None,
@@ -33,9 +34,10 @@ EmptyDeltaRelaxation = {
     'DeltaRelaxation_tHb': None,
     'DeltaRelaxation_HbDiff': None,
 }
-#Minima über gesamten Test
-class Testing():
+# Minima über gesamten Test
 
+
+class Testing():
 
     def __init__(self, df, events, baselines):
 
@@ -171,13 +173,14 @@ class Testing():
         Durchschnitt Baseline - Minima der einzelnen Wdh
 
         """
-        diff_baselinewerte_minima_einzelne_wdh = (baselinewerte - avg_minima_einzelne_wdh)
+        diff_baselinewerte_minima_einzelne_wdh = (
+            baselinewerte - avg_minima_einzelne_wdh)
 
         return diff_baselinewerte_minima_einzelne_wdh
 
     def _delta(self, min_df, max_df, scope):
         """
-        
+
         :param scope: Kontraktion or 
         """
 
@@ -188,7 +191,7 @@ class Testing():
 
         # Spaltennamen umbenennen
 
-        minima_wdh = minima_wdh.rename(columns= Rename_Min_Mapping)
+        minima_wdh = minima_wdh.rename(columns=Rename_Min_Mapping)
         maxima_wdh = maxima_wdh.rename(columns=Rename_Max_Mapping)
 
         # Dataframe mit Minima und Maxima einzelne WDh erstellen
@@ -275,11 +278,11 @@ class Testing():
     def get_avg_delta_relaxation_mid(self, max_, num=3):
         if max_ <= num:
             return EmptyDeltaRelaxation
-        mid = ((max_-num) // 2)
-        events = self.t_events[mid:mid+num]
+        mid = ((max_ - num) // 2)
+        events = self.t_events[mid:mid + num]
         return self._get_avg_delta_relaxation(events)
 
-    # ------------------------------------------------------
+    # --------------------------------------------------------------------- --
 
     # contraction
 
@@ -292,7 +295,8 @@ class Testing():
 
         (minima_einzelne_wdh, maxima_einzelne_wdh, _, _) = result
 
-        delta_contraction = self._deltacontraction(minima_einzelne_wdh, maxima_einzelne_wdh)
+        delta_contraction = self._deltacontraction(
+            minima_einzelne_wdh, maxima_einzelne_wdh)
 
         # return the Series of average delta contraction
 
@@ -311,7 +315,6 @@ class Testing():
         events = events[:num]
         return self._get_avg_delta_contraction(events)
 
-
     def get_avg_delta_contraction_last(self, max_, num=3):
         if max_ <= num:
             return EmptyDeltaKontraktion
@@ -322,8 +325,6 @@ class Testing():
     def get_avg_delta_contraction_mid(self, max_, num=3):
         if max_ < num:
             return EmptyDeltaKontraktion
-        mid = ((max_-num) // 2)
-        events = self.t_events[mid:mid+num]
+        mid = ((max_ - num) // 2)
+        events = self.t_events[mid:mid + num]
         return self._get_avg_delta_contraction(events)
-
-
