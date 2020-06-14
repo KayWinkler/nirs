@@ -1,22 +1,28 @@
+"""
+retults - iterate over the data and create the result csv output
+"""
+import csv
 import os
-import pandas as pd
 
-from nirs import Nirs
-from maximalkraft import Maximalkraft
 import kraftausdauer
+from maximalkraft import Maximalkraft
+from nirs import Nirs
+import pandas as pd
 
 
 maxkraft_inputdir = 'maximalkraft_daten'
 kraftausdauer_inputdir = 'kraftausdauer_daten'
 nirs_inputdir = 'NIRS_daten'
 
+
 def process_probands(maxkraft_inputdir):
     for filename in os.listdir(maxkraft_inputdir):
         if not filename.endswith('.txt'):
             continue
         basename, _, _ext = filename.rpartition('.')
-        proband, _ , hand = basename.partition('_')
+        proband, _, hand = basename.partition('_')
         yield proband, hand, filename
+
 
 def get_maxkraft(filename):
     """ zur Bestimmung der Maximalkraft """
@@ -35,7 +41,8 @@ def get_kraftausdauer(filename, f_max):
         raise Exception('Unable to load Kraftausdauer')
 
     return kraftausdauer.get_kraftausdauer(
-                            kraftausdauer_file, f_max)
+        kraftausdauer_file, f_max)
+
 
 def load_nirs_data(filename):
 
@@ -45,7 +52,6 @@ def load_nirs_data(filename):
         raise Exception('Nirsfile not found')
 
     return Nirs().load_nirs_data(nirs_file)
-
 
 
 class Row():
@@ -69,14 +75,14 @@ class Row():
 
             if isinstance(res, pd.Series):
                 data_dict = res.to_dict()
- 
+
             for k in sorted(data_dict.keys()):
                 if prefix:
-                    head = ':'.join([prefix,k])
+                    head = ':'.join([prefix, k])
                 else:
                     head = k
 
-                headers.append(head.replace(' ','_'))
+                headers.append(head.replace(' ', '_'))
 
         return headers
 
@@ -96,19 +102,35 @@ class Row():
                 data_dict = res.to_dict()
 
             for k in sorted(data_dict.keys()):
-                datas.append(data_dict[k])
+                val = data_dict[k]
+                if not isinstance(val, (float, int)):
+                    pass
+                if "%r" % val in ['nan']:
+                    val = ''
+                if val is None:
+                    val = ''
+
+                datas.append(val)
 
         return datas
+
+    def get(self):
+        headers = self.get_header()
+        datas = self.get_data()
+        return list(zip(headers, datas))
 
     def __repr__(self):
         headers = self.get_header()
         datas = self.get_data()
         return "#%d %r" % (len(datas), list(zip(headers, datas)))
+
+
 '''
     with open('output.csv', 'w', newline='') as file:
         writer = csv.writer(file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
 '''
-import csv
+
+
 class CSVWriter(object):
     def __init__(self, filename):
         self.filename = filename
@@ -117,7 +139,8 @@ class CSVWriter(object):
 
     def __enter__(self):
         self.file = open(self.filename, 'w', newline='')
-        self.writer = csv.writer(self.file, quoting=csv.QUOTE_NONNUMERIC, delimiter=';')
+        self.writer = csv.writer(
+            self.file, quoting=csv.QUOTE_NONNUMERIC, delimiter=',')
         return self
 
     def writerow(self, row):
@@ -133,15 +156,16 @@ class CSVWriter(object):
 
         self.writer.writerow(row.get_data())
 
-
     def __exit__(self, type, value, traceback):
         self.file.close()
+
 
 def test():
 
     from recovery import Recovery
     from testing import Testing
 
+    df = pd.DataFrame()
     with CSVWriter('output.csv') as writer:
 
         for entry in process_probands('maximalkraft_daten'):
@@ -168,49 +192,87 @@ def test():
 
             row.add('RecoveryHalftime', recovery.get_timetohalf_recovery())
             row.add('RecoveryDepletion', recovery.get_dept())
-            row.add('RecoveryDeltaprozent',recovery.get_deltaprozent())
+            row.add('RecoveryDeltaprozent', recovery.get_deltaprozent())
 
             testing = Testing(nirs_data, nirs_event, nirs_baseline)
-
-            row.add('TestingAll', testing.get_avg_delta_relaxation_all()) # Series
-            row.add('TestingAll', testing.get_avg_delta_contraction_all()) # Series
 
             for item in kraftausdauer:
 
                 citeria = list(item.keys())[0]
                 valid_intervals = item[citeria]['valid']
 
-                row.add('Testing_' + citeria,{'valid': valid_intervals})
+                row.add('Testing_' + citeria, {'valid': valid_intervals})
+
+                try:
+                    row.add(
+                        'TestingMeanMin_' + citeria,
+                        testing.get_mean_minima(valid_intervals)[0]
+                    )
+                except Exception as exx:
+                    testing.get_mean_minima(valid_intervals)[0]
+
+                try:
+                    row.add(
+                        'TestingMeanMinDiff_' + citeria,
+                        testing.get_mean_minima(valid_intervals)[1]
+                    )
+                except Exception as exx:
+                    testing.get_mean_minima(valid_intervals)[1]
+
+                row.add(
+                    'TestingMin_' + citeria,
+                    testing.get_minima(valid_intervals)[0]
+                )
+                row.add(
+                    'TestingMinDiff_' + citeria,
+                    testing.get_minima(valid_intervals)[1]
+                )
+
+                row.add(
+                    'TestingAll_' + citeria,
+                    testing.get_avg_delta_relaxation_all(valid_intervals)
+                )
+                row.add(
+                    'TestingAll_' + citeria,
+                    testing.get_avg_delta_contraction_all(valid_intervals)
+                )
 
                 row.add(
                     'TestingFirst_' + citeria,
                     testing.get_avg_delta_relaxation_first(valid_intervals)
-                    )
+                )
                 row.add(
                     'TestingFirst_' + citeria,
                     testing.get_avg_delta_contraction_first(valid_intervals)
-                    )
+                )
 
                 row.add(
                     'TestingMid_' + citeria,
                     testing.get_avg_delta_relaxation_mid(valid_intervals)
-                    )
+                )
                 row.add(
                     'TestingMid_' + citeria,
                     testing.get_avg_delta_contraction_mid(valid_intervals)
-                    )
+                )
 
                 row.add(
                     'TestingLast_' + citeria,
                     testing.get_avg_delta_relaxation_last(valid_intervals)
-                    )
+                )
                 row.add(
                     'TestingLast_' + citeria,
                     testing.get_avg_delta_contraction_last(valid_intervals)
-                    )
+                )
 
             writer.writerow(row)
 
+            serie = pd.Series(row.get_data(), index=row.get_header())
+            new_df = pd.DataFrame(columns=row.get_header())
+            new_df = new_df.append(serie, ignore_index=True)
+            df = df.append(new_df)
+
+    # print(df)
+    df.to_excel("output.xlsx")
 
 
 if __name__ == '__main__':
