@@ -134,7 +134,7 @@ class CurveDataFrame():
 
         :param curve_df: the interpolated data frame
         :param maxima: switch if minima or maxima are searched
-        :return: dict for each column with a dict of x,y values
+        :return: dict for each column with a sorted list of x,y tuples
         """
 
         column_names = curve_df.columns.tolist()
@@ -172,6 +172,16 @@ class CurveDataFrame():
 
                 except Exception as exx:
                     print('unknown exception occured: %r' % exx)
+
+        # finally convert the dict of values into a sorted list of tuples
+
+        for column_name in column_names:
+            value_dict = extrema_dict[column_name]
+            values = []
+            for entry in sorted(value_dict.keys()):
+                values.append((entry, value_dict[entry]))
+
+            extrema_dict[column_name] = values
 
         return extrema_dict
 
